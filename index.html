@@ -753,7 +753,10 @@ function renderPreview(){
   ctx.strokeStyle=COL.water;ctx.lineWidth=Math.max(0.9,0.009*M)*s;creeks.forEach(line);
   // story
   var u=Math.max(6,Math.min(11,0.065*M))*s,p=S.pts,col=COL.story;
-  houses.slice(0,40).forEach(function(h){var q=G(h);drawIcon(ctx,"house",col,q[0],q[1],u*0.75,0,false,false);});
+  // same rule as TrophyTerrain: the 12 nearest the middle, none right on the story
+  var story_=[p.hunter,p.hit,p.recovery].concat(S.seq.trail).filter(Boolean),half_=fr.area/2;
+  houses=houses.filter(function(h){var hm=mPerDeg(h[0]);return Math.abs((h[0]-fr.c[0])*hm[0])<=half_*0.9&&Math.abs((h[1]-fr.c[1])*hm[1])<=half_*0.9&&story_.every(function(q){return distM(h,q)>0.06*half_;});}).sort(function(x,y){return distM(x,fr.c)-distM(y,fr.c);}).slice(0,12);
+  houses.forEach(function(h){var q=G(h);drawIcon(ctx,"house",col,q[0],q[1],u*0.75,0,false,false);});
   if(p.camp&&(S.seq.hike_in.length||S.seq.hike_out.length||true)){
    ctx.fillStyle=col;var rin=S.seq.hike_in.length?[p.camp].concat(S.seq.hike_in,p.hunter?[p.hunter]:[]):[];
    var rout=S.seq.hike_out.length?(p.recovery?[p.recovery]:[]).concat(S.seq.hike_out,[p.camp]):[];
