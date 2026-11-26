@@ -90,6 +90,7 @@ label.f{display:block;font-size:13px;color:var(--mut);margin:0 0 4px}
 .examples img{width:100%;border-radius:8px}
 .examples div{font:600 14px 'Barlow Condensed';letter-spacing:.06em;color:var(--tan)}
 .leaflet-container{font:inherit}
+.btn.xm.on{background:var(--tan);color:var(--char);border-color:var(--tan)}
 .pin{width:34px;height:34px;border-radius:50%;background:var(--bone);border:3px solid var(--orange);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.5)}
 .pin span{display:block;width:22px;height:22px;background:var(--orange);-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
 .dotpin{width:12px;height:12px;border-radius:50%;background:var(--orange);border:2px solid #fff}
@@ -177,20 +178,25 @@ footer{color:var(--mut);font-size:13px;text-align:center;padding:10px 18px 30px}
  <h2><span class="n">6</span>Send your order</h2>
  <p class="sub">Nothing is charged here. You get a preview picture of your map from me before you pay.</p>
  <div class="two">
-  <div><label class="f">Your name</label><input id="cname"></div>
-  <div><label class="f">Instagram, Facebook or email</label><input id="cmail"></div>
+  <div><label class="f">Your name *</label><input id="cname" autocomplete="name"></div>
+  <div><label class="f">Instagram or Facebook name *</label><input id="cmail"></div>
+  <div><label class="f">Email *</label><input id="cemail" type="email" autocomplete="email"></div>
+  <div><label class="f">Need it by Christmas?</label>
+   <div class="row"><button class="btn small xm" data-v="Yes">Yes</button><button class="btn small xm" data-v="No">No</button></div></div>
  </div>
+ <div style="margin-top:10px"><label class="f">Shipping address *</label><textarea id="caddr" rows="3" autocomplete="street-address"></textarea></div>
  <div style="margin-top:10px"><label class="f">Anything else I should know (other animal, a story, a date you need it by)</label><textarea id="notes" rows="2"></textarea></div>
  <div class="row" style="margin-top:12px">
-  <button class="btn go" id="finish">Finish my order</button>
+  <button class="btn go" id="finish">Send my order</button>
  </div>
  <div class="msg" id="msg"></div>
- <div id="codeBox" style="display:none;margin-top:10px">
-  <label class="f">Your order code (already copied)</label>
-  <div class="code" id="code"></div>
-  <div class="row" style="margin-top:8px"><button class="btn" id="copyCode">Copy again</button><a class="btn go" id="formLink" target="_blank" rel="noopener">Open the order form</a></div>
-  <p class="sub" style="margin-top:8px">The order form opens with your code filled in. It asks for your email and shipping address. If the code box is empty, paste it in (it is already copied).</p>
+ <div id="sentBox" style="display:none;margin-top:10px;padding:12px;border-radius:10px;background:#1f3320;border:1px solid #3A5634">
+  <b>Order sent.</b> I will message you on Instagram or Facebook with a preview picture of your map, then a PayPal invoice once you like it.
  </div>
+ <details id="codeBox" style="display:none;margin-top:10px"><summary class="sub" style="cursor:pointer">Trouble sending? Use the order form instead</summary>
+  <div class="code" id="code" style="margin-top:8px"></div>
+  <div class="row" style="margin-top:8px"><button class="btn" id="copyCode">Copy code</button><a class="btn" id="formLink" target="_blank" rel="noopener">Open the order form</a></div>
+ </details>
 </section>
 
 </main>
@@ -937,18 +943,34 @@ function summary(job){
 function copy(t,done){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(done).catch(function(){var ta=el("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done();}catch(e){}ta.remove();});}
 $("finish").onclick=function(){
  var r=buildJob(),m=$("msg");if(r.error){m.textContent=r.error;m.className="msg err";return;}
+ if(sent){m.textContent="This order was already sent. Reload the page to start a new one.";m.className="msg err";return;}
+ var miss=[];if(!$("cname").value.trim())miss.push("your name");if(!$("cmail").value.trim())miss.push("your Instagram or Facebook name");
+ if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("cemail").value.trim()))miss.push("your email");if(!$("caddr").value.trim())miss.push("your shipping address");
+ if(miss.length){m.textContent="Please fill in "+miss.join(", ")+".";m.className="msg err";return;}
  if(S.osm.busy){m.textContent="Still loading the roads, creeks and woods. Try again in a few seconds.";m.className="msg err";return;}
  encode(r.job).then(function(code){finishWith(r,code);});
 };
+var FORM_POST=FORM_URL.replace(/viewform$/,"formResponse");
+var FORM_EMAIL_ENTRY="emailAddress",FORM_ADDR_ENTRY="entry.182211146",FORM_XMAS_ENTRY="entry.2035535000",FORM_NOTE_ENTRY="entry.1096129902";
+var xmas="";
+document.querySelectorAll(".xm").forEach(function(b){b.onclick=function(){xmas=b.dataset.v;document.querySelectorAll(".xm").forEach(function(x){x.classList.toggle("on",x===b);});};});
+var sent=false;
 function finishWith(r,code){
  var m=$("msg"),full=summary(r.job)+"\n"+code;
  $("code").textContent=full;$("codeBox").style.display="";
- var url=FORM_URL+"?usp=pp_url"+(full.length<6000?"&"+FORM_CODE_ENTRY+"="+encodeURIComponent(full):"")+($("cname").value?"&"+FORM_NAME_ENTRY+"="+encodeURIComponent($("cname").value):"")+($("cmail").value?"&"+FORM_SOCIAL_ENTRY+"="+encodeURIComponent($("cmail").value):"");
- $("formLink").href=url;
- copy(full,function(){m.textContent="Order code copied.";m.className="msg ok";});
- m.textContent="Order code ready.";m.className="msg ok";
+ $("formLink").href=FORM_URL+"?usp=pp_url"+(full.length<6000?"&"+FORM_CODE_ENTRY+"="+encodeURIComponent(full):"")+"&"+FORM_NAME_ENTRY+"="+encodeURIComponent($("cname").value)+"&"+FORM_SOCIAL_ENTRY+"="+encodeURIComponent($("cmail").value);
+ var f=new URLSearchParams();
+ f.append(FORM_CODE_ENTRY,full);f.append(FORM_NAME_ENTRY,$("cname").value.trim());f.append(FORM_SOCIAL_ENTRY,$("cmail").value.trim());
+ f.append(FORM_EMAIL_ENTRY,$("cemail").value.trim());f.append(FORM_ADDR_ENTRY,$("caddr").value.trim());
+ if(xmas)f.append(FORM_XMAS_ENTRY,xmas);
+ if($("notes").value.trim())f.append(FORM_NOTE_ENTRY,"Notes from the Hunt Builder: "+$("notes").value.trim());
+ m.textContent="Sending...";m.className="msg ok";$("finish").disabled=true;
+ fetch(FORM_POST,{method:"POST",mode:"no-cors",credentials:"omit",body:f})
+ .then(function(){sent=true;m.textContent="";$("sentBox").style.display="";$("finish").textContent="Sent";})
+ .catch(function(){$("finish").disabled=false;m.textContent="Could not send right now. Check your internet and try again, or open Trouble sending below.";m.className="msg err";$("codeBox").open=true;});
 }
-$("copyCode").onclick=function(){copy($("code").textContent,function(){$("msg").textContent="Copied again.";});};
+
+$("copyCode").onclick=function(){copy($("code").textContent,function(){$("msg").textContent="Copied. Paste it into the first box of the order form.";});};
 
 // ---------------------------------------------------------------- units
 function setUnits(u){S.units=u;$("uImp").classList.toggle("on",u==="imperial");$("uMet").classList.toggle("on",u==="metric");changed(true);renderExamples();}
