@@ -752,10 +752,8 @@ function renderPreview(){
   ctx.setLineDash([2.2*s,1.6*s]);ctx.lineWidth=Math.max(0.7,0.007*M)*s;trails.forEach(line);ctx.setLineDash([]);
   ctx.strokeStyle=COL.water;ctx.lineWidth=Math.max(0.9,0.009*M)*s;creeks.forEach(line);
   // story
-  var u=Math.max(6,Math.min(11,0.065*M))*s,p=S.pts,col=COL.story;
-  // same rule as TrophyTerrain: the 12 nearest the middle, none right on the story
-  var story_=[p.hunter,p.hit,p.recovery].concat(S.seq.trail).filter(Boolean),half_=fr.area/2;
-  houses=houses.filter(function(h){var hm=mPerDeg(h[0]);return Math.abs((h[0]-fr.c[0])*hm[0])<=half_*0.9&&Math.abs((h[1]-fr.c[1])*hm[1])<=half_*0.9&&story_.every(function(q){return distM(h,q)>0.06*half_;});}).sort(function(x,y){return distM(x,fr.c)-distM(y,fr.c);}).slice(0,12);
+  var u=Math.max(M<130?8.5:6,Math.min(11,0.065*M))*s,p=S.pts,col=COL.story; // same symbol size rule as TrophyTerrain (0.4 nozzle)
+  houses=pickHouses(houses,fr);
   houses.forEach(function(h){var q=G(h);drawIcon(ctx,"house",col,q[0],q[1],u*0.75,0,false,false);});
   if(p.camp&&(S.seq.hike_in.length||S.seq.hike_out.length||true)){
    ctx.fillStyle=col;var rin=S.seq.hike_in.length?[p.camp].concat(S.seq.hike_in,p.hunter?[p.hunter]:[]):[];
@@ -795,6 +793,53 @@ function renderPreview(){
  if(fr&&DEM.busy)cap+=" Loading the land...";
  $("pvCap").textContent=fr?cap+" Your proof picture comes from the real 3D build.":"Mark your hunt to see your map.";
 }
+// same rule as TrophyTerrain: the 12 nearest the middle, none right on the story
+function pickHouses(houses,fr){
+ var p=S.pts,story_=[p.hunter,p.hit,p.recovery].concat(S.seq.trail).filter(Boolean),half_=fr.area/2;
+ return houses.filter(function(h){var hm=mPerDeg(h[0]);return Math.abs((h[0]-fr.c[0])*hm[0])<=half_*0.9&&Math.abs((h[1]-fr.c[1])*hm[1])<=half_*0.9&&story_.every(function(q){return distM(h,q)>0.06*half_;});})
+  .sort(function(x,y){return distM(x,fr.c)-distM(y,fr.c);}).slice(0,12);
+}
+// the roads, creeks, woods and houses that are on, cut to the printed square and thinned, for the order code
+function sceneForJob(fr){
+ var m=fr.m,c=fr.c,H=fr.area/2*1.08;
+ function toXY(q){return [(q[1]-c[1])*m[1],(q[0]-c[0])*m[0]];}
+ function toLL(v){return [+(c[0]+v[1]/m[0]).toFixed(6),+(c[1]+v[0]/m[1]).toFixed(6)];}
+ function dp(pts,tol){if(pts.length<3)return pts;var keep=new Array(pts.length).fill(false);keep[0]=keep[pts.length-1]=true;var st=[[0,pts.length-1]];
+  while(st.length){var se=st.pop(),a=pts[se[0]],b=pts[se[1]],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1e-9,best=-1,bi=-1;
+   for(var i=se[0]+1;i<se[1];i++){var d=Math.abs((pts[i][0]-a[0])*dy-(pts[i][1]-a[1])*dx)/L;if(d>best){best=d;bi=i;}}
+   if(best>tol){keep[bi]=true;st.push([se[0],bi],[bi,se[1]]);}}
+  return pts.filter(function(_,i){return keep[i];});}
+ function inside(v){return Math.abs(v[0])<=H&&Math.abs(v[1])<=H;}
+ function clipSeg(a,b){var t0=0,t1=1,dx=b[0]-a[0],dy=b[1]-a[1],P=[-dx,dx,-dy,dy],Q=[a[0]+H,H-a[0],a[1]+H,H-a[1]];
+  for(var i=0;i<4;i++){if(P[i]===0){if(Q[i]<0)return null;}else{var r=Q[i]/P[i];if(P[i]<0){if(r>t1)return null;if(r>t0)t0=r;}else{if(r<t0)return null;if(r<t1)t1=r;}}}
+  return [[a[0]+t0*dx,a[1]+t0*dy],[a[0]+t1*dx,a[1]+t1*dy]];}
+ function clipLine(g){var v=g.map(toXY),out=[],cur=[];
+  for(var i=1;i<v.length;i++){var s_=clipSeg(v[i-1],v[i]);if(!s_){if(cur.length>1)out.push(cur);cur=[];continue;}
+   if(!cur.length)cur.push(s_[0]);cur.push(s_[1]);if(!inside(v[i])){out.push(cur);cur=[];}}
+  if(cur.length>1)out.push(cur);
+  return out.map(function(p){return dp(p,0.8).map(toLL);}).filter(function(p){return p.length>1;});}
+ function clipPoly(ring){var v=ring.map(toXY);
+  [[0,-1],[0,1],[1,-1],[1,1]].forEach(function(e){var ax=e[0],sg=e[1],o=[];if(!v.length)return;
+   function ins(p){return sg<0?p[ax]>=-H:p[ax]<=H;}
+   function cut(p,q){var lim=sg*H,t=(lim-p[ax])/(q[ax]-p[ax]);return [p[0]+t*(q[0]-p[0]),p[1]+t*(q[1]-p[1])];}
+   for(var i=0;i<v.length;i++){var cu=v[i],pr=v[(i+v.length-1)%v.length];if(ins(cu)){if(!ins(pr))o.push(cut(pr,cu));o.push(cu);}else if(ins(pr))o.push(cut(pr,cu));}
+   v=o;});
+  if(v.length<3)return null;
+  // a closed ring: split at the corner farthest from the start so the thinning keeps its shape
+  var k=0,far=-1;v.forEach(function(p,i){var d=Math.hypot(p[0]-v[0][0],p[1]-v[0][1]);if(d>far){far=d;k=i;}});
+  if(k===0)return null;
+  var A=dp(v.slice(0,k+1),1.2),B=dp(v.slice(k).concat([v[0]]),1.2);v=A.concat(B.slice(1));
+  if(v.length<4)return null;return v.map(toLL);}
+ var out={woods:[],fields:[],creeks:[],roads:[],houses:[]};
+ S.osm.feats.forEach(function(f){if(!featOn(f)||!inFrame(f,fr))return;
+  if(f.cat==="houses"){out.houses.push(f.g);return;}
+  if(f.kind==="area"){f.g.forEach(function(r){var cp=clipPoly(r);if(cp)out[f.cat].push(cp);});return;}
+  clipLine(f.g).forEach(function(p){out[f.cat==="trails"?"roads":f.cat].push(p);});});
+ S.drawn.woods.forEach(function(g){out.woods.push(g);});S.drawn.fields.forEach(function(g){out.fields.push(g);});
+ S.drawn.creeks.forEach(function(g){out.creeks.push(g);});S.drawn.roads.forEach(function(g){out.roads.push(g);});
+ out.houses=pickHouses(out.houses,fr).concat(S.drawn.houses);
+ return out;
+}
 function shapeName(k){for(var i=0;i<SHAPES.length;i++)if(SHAPES[i][0]===k)return SHAPES[i][1];}
 function dotted(ctx,pts,r,gap){var acc=0;for(var i=1;i<pts.length;i++){var a=pts[i-1],b=pts[i],d=Math.hypot(b[0]-a[0],b[1]-a[1]);while(acc<d){var t=acc/d;ctx.beginPath();ctx.arc(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,r,0,Math.PI*2);ctx.fill();acc+=gap;}acc-=d;}}
 function dropsAlong(ctx,pts,r,gap){
@@ -827,7 +872,7 @@ function drawWords(ctx,Lo,P,col,fr){
   var R=Lo.tile.R,w=Lo.w,cy=Lo.tile.cy,cx=Lo.tile.cx,mid=R*0.866+w*0.5,mm=Math.max(minCap,0.5*w);
   function edgeText(txt,ang,dist,maxw){if(!txt)return;var a=ang*Math.PI/180;var q=P(cx+dist*Math.cos(a),cy+dist*Math.sin(a));ctx.save();ctx.translate(q[0],q[1]);ctx.rotate((ang>180?-(ang+90):-(ang-90))*Math.PI/180);var m2=fitText(txt,mm,maxw);ctx.fillText(txt,0,0);ctx.restore();}
   edgeText(t1,90,mid,R*0.95);edgeText(t2,270,mid,R*0.95);
-  if(bits.length>1)edgeText(bits[1],210,mid,R*0.9);
+  if(bits.length>1)edgeText(bits.slice(0,2).join("  \u2022  "),210,mid,R*0.9);
   if(bits.length>2)edgeText(bits[2],330,mid,R*0.9);
   var nq=P(cx+mid*Math.cos(30*Math.PI/180),cy+mid*Math.sin(30*Math.PI/180));northArrow(ctx,nq[0],nq[1],w*0.62*s,col);
   var wq=P(cx+mid*Math.cos(150*Math.PI/180),cy+mid*Math.sin(150*Math.PI/180));
@@ -868,26 +913,41 @@ function buildJob(){
   shot_mark:c.setup==="weapon"?"weapon":"setup",setup:c.setup==="weapon"?"ground":c.setup,weapon_on_base:true,
   shape:c.shape,keepsake:c.keep==="tag"?"broadhead":c.keep,magnet:!!c.magnet,ornament:orn,units:S.units,
   plaque_line1:$("l1").value.toUpperCase().trim(),plaque_line2:$("l2").value.toUpperCase().trim(),topo_lines:true,
-  woods:S.drawn.woods,fields:S.drawn.fields,creeks:S.drawn.creeks,roads:S.drawn.roads,props:S.drawn.houses.map(function(h){return {type:"cabin",at:h};})};
+  woods:[],fields:[],creeks:[],roads:[],props:[]};
+ var sc=sceneForJob(fr);
+ job.woods=sc.woods;job.fields=sc.fields;job.creeks=sc.creeks;job.roads=sc.roads;
+ job.props=sc.houses.map(function(h){return {type:"cabin",at:h};});
+ job.trees=sc.woods.length?"woods":(S.osm.catsOff.woods?"none":"everywhere");
  if(p.camp){job.camp=p.camp;job.camp_icon=c.camp_icon;job.hike_in=S.seq.hike_in;job.hike_out=S.seq.hike_out;job.show_hike=true;}else job.show_hike=false;
- job.osm={auto:true,off:Object.keys(S.osm.off),cats_off:Object.keys(S.osm.catsOff)};
- job.customer={name:$("cname").value,contact:$("cmail").value,notes:$("notes").value,keepsake_item:c.keep,size:c.size,price:SIZES[c.size].price+(c.keep!=="none"?KEEPSAKE_PRICE:0),placed_by:"Hunt Builder 1"};
+ // the scene is in the code; TrophyTerrain only looks it up itself when the page could not
+ job.osm={auto:!S.osm.bbox,source:"page",off:Object.keys(S.osm.off),cats_off:Object.keys(S.osm.catsOff)};
+ job.customer={name:$("cname").value,contact:$("cmail").value,notes:$("notes").value,keepsake_item:c.keep,size:c.size,price:SIZES[c.size].price+(c.keep!=="none"?KEEPSAKE_PRICE:0),placed_by:"Hunt Builder 2"};
  return {job:job};
 }
-function encode(job){var s=JSON.stringify(job);var b=btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");return "HSM1-"+b;}
+function b64url(bytes){var bin="";for(var i=0;i<bytes.length;i+=8192)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+function encode(job){ // HSM2: deflate packed JSON; HSM1 (plain) where the browser cannot pack
+ var bytes=new TextEncoder().encode(JSON.stringify(job));
+ if(!window.CompressionStream)return Promise.resolve("HSM1-"+b64url(bytes));
+ var cs=new CompressionStream("deflate-raw");var w=cs.writable.getWriter();w.write(bytes);w.close();
+ return new Response(cs.readable).arrayBuffer().then(function(ab){return "HSM2-"+b64url(new Uint8Array(ab));});
+}
 function summary(job){
  var c=S.c;return sizeLabel(c.size)+" "+shapeName(c.shape)+" | "+ANIMALS.filter(function(a){return a[0]===c.animal;})[0][1]+" | "+c.weapon+" | "+(c.setup==="weapon"?"weapon at the shot spot":c.setup)+(c.keep!=="none"?" | pocket: "+c.keep:"")+(c.magnet?" | magnet":"")+" | $"+job.customer.price;
 }
 function copy(t,done){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(done).catch(function(){var ta=el("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");done();}catch(e){}ta.remove();});}
 $("finish").onclick=function(){
  var r=buildJob(),m=$("msg");if(r.error){m.textContent=r.error;m.className="msg err";return;}
- var code=encode(r.job),full=summary(r.job)+"\n"+code;
+ if(S.osm.busy){m.textContent="Still loading the roads, creeks and woods. Try again in a few seconds.";m.className="msg err";return;}
+ encode(r.job).then(function(code){finishWith(r,code);});
+};
+function finishWith(r,code){
+ var m=$("msg"),full=summary(r.job)+"\n"+code;
  $("code").textContent=full;$("codeBox").style.display="";
- var url=FORM_URL+"?usp=pp_url&"+FORM_CODE_ENTRY+"="+encodeURIComponent(full)+($("cname").value?"&"+FORM_NAME_ENTRY+"="+encodeURIComponent($("cname").value):"")+($("cmail").value?"&"+FORM_SOCIAL_ENTRY+"="+encodeURIComponent($("cmail").value):"");
+ var url=FORM_URL+"?usp=pp_url"+(full.length<6000?"&"+FORM_CODE_ENTRY+"="+encodeURIComponent(full):"")+($("cname").value?"&"+FORM_NAME_ENTRY+"="+encodeURIComponent($("cname").value):"")+($("cmail").value?"&"+FORM_SOCIAL_ENTRY+"="+encodeURIComponent($("cmail").value):"");
  $("formLink").href=url;
  copy(full,function(){m.textContent="Order code copied.";m.className="msg ok";});
  m.textContent="Order code ready.";m.className="msg ok";
-};
+}
 $("copyCode").onclick=function(){copy($("code").textContent,function(){$("msg").textContent="Copied again.";});};
 
 // ---------------------------------------------------------------- units
