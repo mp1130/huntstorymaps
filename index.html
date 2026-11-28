@@ -7,7 +7,7 @@
 <title>Hunt Story Maps | Build your hunt</title>
 <meta name="description" content="Your hunt, 3D printed on the real ground. Mark the stand, the shot and the blood trail, and get a custom 3D terrain map.">
 <meta property="og:title" content="Hunt Story Maps | Your hunt, 3D printed on the real ground">
-<meta property="og:description" content="Mark the stand, the shot and the blood trail. Printed in 3D from real elevation data. From $35 shipped.">
+<meta property="og:description" content="Mark the stand, the shot and the blood trail. Printed in 3D from real elevation data. From $32 shipped.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -282,6 +282,9 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 .mbox canvas,.mbox img{width:100%;border-radius:10px}
 .mbox .row{margin-top:12px;justify-content:flex-end}
 .mbox ul{padding-left:20px;line-height:1.5;margin:6px 0}
+.drow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 2px}.drow input{width:84px;text-align:center}.drow .f{margin:0 0 0 6px}.drow .f:first-child{margin-left:0}.du{opacity:.7;font-size:14px;margin-right:8px}
+#sizeBtn{cursor:pointer;text-decoration:underline;white-space:nowrap}
+.tiles.four{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.tiles.four .tile{padding:5px 3px 7px;min-width:0}.tiles.four .pic.ph{height:64px}.tiles.four .nt{display:none}
 </style>
 </head>
 <body>
@@ -290,6 +293,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
  <img id="logo" alt="">
  <div class="brand">HUNT STORY MAPS</div>
  <div class="sp"></div>
+ <button class="ghost" id="sizeBtnTop" style="display:none;margin-right:8px"></button>
  <button class="ghost" id="helpBtn">Help</button>
 </header>
 
@@ -335,7 +339,10 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
 
  <div class="panel" id="panel">
   <div class="pstep" data-s="1">
-   <h2>What did you get?</h2>
+   <h2>Pick a size</h2>
+   <div class="tiles four" id="tSize1"></div>
+   <p class="tip">Shipping is included. Change the size any time with the Size button at the top of every step.</p>
+   <h2 style="margin-top:14px">What did you get?</h2>
    <div class="tiles" id="tAnimal"></div>
    <div class="row" style="margin-top:10px"><span class="sub" style="margin:0">How many were together when you shot?</span>
     <div class="stepper"><button id="hMinus">&minus;</button><span id="herd">1</span><button id="hPlus">+</button></div></div>
@@ -397,8 +404,12 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
    <h3>Words on the base</h3>
    <div class="fld"><label class="f" for="l1">Top line (big)</label><input id="l1" maxlength="30" placeholder="10 POINT BUCK" autocapitalize="characters"><div class="whint" id="w1"></div></div>
    <div class="fld"><label class="f" for="l2">Bottom line</label><input id="l2" maxlength="30" placeholder="NOV 14, 2026  OHIO" autocapitalize="characters"><div class="whint" id="w2"></div></div>
-   <p class="tip">Your weapon, shot distance and trail distance are added for you.</p>
+   <p class="tip">Your weapon, shot distance and trail length are added for you. Remember them different? Type your own.</p>
+   <div class="drow"><label class="f" for="dShot">Shot</label><input id="dShot" inputmode="numeric" maxlength="4" autocomplete="off"><span class="du" id="duShot">yd</span>
+    <label class="f" for="dTrail">Blood trail</label><input id="dTrail" inputmode="numeric" maxlength="5" autocomplete="off"><span class="du" id="duTrail">yd</span></div>
+   <div class="whint" id="wDist"></div>
    <h3>How it hangs</h3><div class="tiles" id="tMag"></div>
+   <div class="tipbox" id="hangTip"></div>
    <div id="keepBox"><h3>Keepsake pocket, +$<span id="keepPrice">10</span></h3>
    <p class="sub">A pocket on the base that holds your real casing, shell, broadhead or tag. Square and rectangle maps, 4 in and up.</p>
    <div class="tiles" id="tKeep"></div></div>
@@ -429,6 +440,7 @@ input[type=range]::-moz-range-thumb{width:26px;height:26px;border-radius:50%;bac
    <div class="total">
     <div class="line"><span id="tLine1">Map</span><span id="tVal1"></span></div>
     <div class="line" id="tKeepLine" style="display:none"><span>Keepsake pocket</span><span id="tKeepVal"></span></div>
+    <div class="line" id="tMagLine" style="display:none"><span>Fridge magnet back</span><span id="tMagVal"></span></div>
     <div class="line"><span>Shipping</span><span>included</span></div>
     <div class="sum"><span>Total</span><span id="tSum"></span></div>
     <div class="line" style="margin-top:4px"><span>Nothing is charged now. You get a proof picture first, then a PayPal invoice.</span></div>
@@ -482,12 +494,13 @@ var ICONS=window.HSM_ICONS||{},PHOTOS=window.HSM_PHOTOS||{};
 var ORDER_URL="https://script.google.com/macros/s/AKfycbxxG05KLFPXuAWtQ6QEFpVt1FZfRIR1SSeC_eKXx2VSOiRBg4MQrcavE3XfZ9YTOZKE/exec";
 var SHOP_IG="huntstorymaps";
 var SIZES={
- orn:{label:"3 in ornament",price:30,reg:35,mm:76.2,note:"Hangs on the tree"},
+ orn:{label:"3 in",price:32,reg:37,mm:76.2,note:"Tree ornament or fridge size"},
  s4:{label:"4 in",price:35,reg:40,mm:101.6,note:"Desk or fridge size"},
  s6:{label:"6 in",price:45,reg:50,mm:152.4,note:"Shelf size, most popular"},
  s8:{label:"8 in",price:55,reg:60,mm:203.2,note:"The showpiece"}
 };
 var KEEPSAKE_PRICE=10;
+var MAGNET_PRICE=2;        // fridge magnet back: the magnets and setting them in
 // the four filaments. Every map prints in these and nothing else
 var PRINT={tan:"#CDB98F",green:"#3F5637",blue:"#4F7FA8",red:"#A8262A"};
 var COLOR_NAME={tan:"Tan",green:"Green",blue:"Blue",red:"Red"};
@@ -527,7 +540,7 @@ function fmtDist(m){
 }
 function fmtLen(mm){return S.units==="metric"?Math.round(mm)+" mm":(mm/25.4).toFixed(mm<25.4*2?1:1)+" in";}
 function fmtPair(w,h){return S.units==="metric"?Math.round(w)+" x "+Math.round(h)+" mm":(w/25.4).toFixed(1)+" x "+(h/25.4).toFixed(1)+" in";}
-function sizeLabel(k){var z=SIZES[k];if(S.units==="imperial")return z.label;return Math.round(z.mm)+" mm"+(k==="orn"?" ornament":"");}
+function sizeLabel(k){var z=SIZES[k];if(S.units==="imperial")return z.label;return Math.round(z.mm)+" mm";}
 function nameOf(list,k){for(var i=0;i<list.length;i++)if(list[i][0]===k)return list[i][1];return k;}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 var toastT=null;
@@ -544,7 +557,7 @@ function blank(){return {
  drawn:{woods:[],fields:[],creeks:[],roads:[],houses:[]},
  frame:{area:null,center:null},
  off:{},on:{},catsOff:{},
- c:{animal:"buck",herd:1,weapon:"bow",setup:"weapon",camp_icon:"tent",size:"s6",shape:"hexagon",keep:"none",magnet:false,base:"green",words:"tan"},
+ c:{animal:"buck",herd:1,weapon:"bow",setup:"weapon",camp_icon:"tent",size:"s6",shape:"hexagon",keep:"none",magnet:false,loop:false,hangSet:false,topo:true,shotTyped:"",trailTyped:"",base:"green",words:"tan"},
  l1:"",l2:"",units:"imperial",step:0,view:null,baseMap:"sat"};}
 var S=blank();
 var mode=null;          // what a tap on the map does right now: hunter, hit, recovery, trail, camp, hike_in, hike_out, or draw:<kind>
@@ -939,6 +952,15 @@ var MIN_AREA=100,MAX_AREA=6000;
 function modelMM(){return SIZES[S.c.size].mm;}
 function symUnit(M){var u=Math.max(6,Math.min(11,0.065*M));if(M<130)u=Math.max(u,8.5);return u;}   // TrophyTerrain symbol_unit, 0.4 nozzle
 function storyPts(){var p=S.pts;return [p.hunter,p.hit,p.recovery,p.camp].concat(S.seq.trail,S.seq.hike_in,S.seq.hike_out).filter(Boolean);}
+function symEnds(k,u){ // [far end of the weapon, middle of the animal] as lat/lon, on a map at k meters per mm
+ var p=S.pts;if(!p.hunter||!p.hit)return [];
+ var m=mPerDeg(p.hunter[0]),dx=(p.hit[1]-p.hunter[1])*m[1],dy=(p.hit[0]-p.hunter[0])*m[0],d=Math.hypot(dx,dy);if(d<0.01)return [];
+ var ex=dx/d,ey=dy/d,sp=Math.max(0,(0.62*u+1.1)*k-d)/2,wb=1.5*u*k+sp,ab=0.7*u*k+sp;
+ return [[p.hunter[0]-ey*wb/m[0],p.hunter[1]-ex*wb/m[1]],[p.hit[0]+ey*ab/m[0],p.hit[1]+ex*ab/m[1]]];
+}
+function isLoop(){var c=S.c;if(c.loop===undefined)c.loop=(c.size==="orn"&&!c.magnet);return !!c.loop&&!c.magnet;}   // ribbon loop on top
+function topoOn(){return S.c.topo!==false;}
+function typedDist(k){var v=parseFloat(S.c[k]);return v>0&&v<100000?Math.round(v):0;}                   // a distance the customer typed
 function needExt(sh,dx,dy){
  if(sh==="square")return Math.max(2*dx,2*dy);
  if(sh==="wide")return Math.max(2*dx,3*dy);
@@ -950,12 +972,21 @@ function frame(){
  var pts=storyPts();if(!pts.length)return null;
  var las=pts.map(function(q){return q[0];}),los=pts.map(function(q){return q[1];});
  var ac=[(Math.min.apply(null,las)+Math.max.apply(null,las))/2,(Math.min.apply(null,los)+Math.max.apply(null,los))/2];
- var c=S.frame.center||ac,m=mPerDeg(c[0]),sh=S.c.shape,M=modelMM(),ext=0;
- pts.forEach(function(q){ext=Math.max(ext,needExt(sh,Math.abs((q[1]-c[1])*m[1]),Math.abs((q[0]-c[0])*m[0])));});
- var inset=0.75*symUnit(M)+1.5;                          // room for the symbols inside the edge, mm
- var mn=clamp(Math.ceil(ext*M/(M-2*inset)/10)*10,MIN_AREA,MAX_AREA);
+ var sh=S.c.shape,M=modelMM(),u=symUnit(M),c=S.frame.center||ac,m=mPerDeg(c[0]),mn=MIN_AREA,sp0=S.pts,base=[];
+ // room each thing needs inside the edge of the land, mm: half of its symbol plus the rounded edge
+ [[sp0.hunter,0.56*u+2.2],[sp0.hit,3],[sp0.recovery,0.56*u+2.2],[sp0.camp,0.6*u+2.2]].forEach(function(a){if(a[0])base.push(a);});
+ S.seq.trail.concat(S.seq.hike_in,S.seq.hike_out).forEach(function(q){base.push([q,3]);});
+ // The tip of the weapon sits on the shot spot with the weapon behind it, and the animal starts at the hit. Their far
+ // ends must stay on the map too, so they count as points. How far they reach in meters depends on the zoom: 3 passes.
+ for(var pass=0;pass<3;pass++){
+  var all=base.concat(pass?symEnds(mn/M,u).map(function(q,i){return [q,i?0.62*u+2.2:2.5];}):[]);
+  if(!S.frame.center){var la2=all.map(function(a){return a[0][0];}),lo2=all.map(function(a){return a[0][1];});
+   c=[(Math.min.apply(null,la2)+Math.max.apply(null,la2))/2,(Math.min.apply(null,lo2)+Math.max.apply(null,lo2))/2];m=mPerDeg(c[0]);}
+  var need=0;all.forEach(function(a){var q=a[0];need=Math.max(need,needExt(sh,Math.abs((q[1]-c[1])*m[1]),Math.abs((q[0]-c[0])*m[0]))*M/(M-2*a[1]));});
+  mn=clamp(Math.ceil(need/10)*10,MIN_AREA,MAX_AREA);
+ }
  var mx=clamp(Math.max(mn*8,2000),mn+100,MAX_AREA);
- var def=clamp(Math.ceil(mn*1.12/10)*10,MIN_AREA,MAX_AREA);
+ var def=clamp(Math.ceil(mn*(M<130?1.05:1.12)/10)*10,MIN_AREA,MAX_AREA);    // small maps fit tight so the hunt reads big
  var area=S.frame.area==null?def:clamp(S.frame.area,mn,MAX_AREA);
  return {c:[+c[0].toFixed(6),+c[1].toFixed(6)],area:area,m:m,min:mn,max:Math.max(mx,area),def:def,auto:S.frame.area==null&&!S.frame.center};
 }
@@ -1021,7 +1052,7 @@ function nudgeZoom(k){var f=frame();if(!f)return;S.frame.area=clamp(Math.round(f
 $("zIn").onclick=function(){nudgeZoom(1/1.18);};$("zOut").onclick=function(){nudgeZoom(1.18);};
 $("zFit").onclick=function(){S.frame.area=null;S.frame.center=null;commit();fitMapToFrame();toast("Fit to your hunt");};
 function fitMapToFrame(){var f=frame();if(!f||!map)return;var h=f.area*0.62;map.fitBounds([[f.c[0]-h/f.m[0],f.c[1]-h/f.m[1]],[f.c[0]+h/f.m[0],f.c[1]+h/f.m[1]]],{animate:true,maxZoom:19});}
-function setUnits(u){S.units=u;$("uImp").classList.toggle("on",u==="imperial");$("uMet").classList.toggle("on",u==="metric");refresh();save();}
+function setUnits(u){if(u!==S.units){S.c.shotTyped="";S.c.trailTyped="";}S.units=u;$("uImp").classList.toggle("on",u==="imperial");$("uMet").classList.toggle("on",u==="metric");refresh();save();}
 $("uImp").onclick=function(){setUnits("imperial");};$("uMet").onclick=function(){setUnits("metric");};
 
 // ================================================================ roads, trails, creeks, houses, woods and fields around the hunt
@@ -1244,6 +1275,11 @@ function renderCats(){
   });
   d.appendChild(items);box.appendChild(d);
  });
+ var td=el("div","cat"),th=el("div","hd"),ts=el("span","sw");ts.style.background="#E2D5B0";th.appendChild(ts);
+ th.appendChild(el("span","nm","Topo lines<small>"+(topoOn()?"height lines on the land":"off, the land prints plain")+"</small>"));
+ var tt=el("button","tog"+(topoOn()?" on":""));tt.setAttribute("aria-label","Topo lines "+(topoOn()?"on":"off"));
+ tt.onclick=function(ev){ev.stopPropagation();S.c.topo=!topoOn();commit();toast("Topo lines: "+(topoOn()?"ON":"OFF. The land prints plain."));};
+ th.appendChild(tt);td.appendChild(th);box.appendChild(td);
  var db=$("drawBtns");db.innerHTML="";
  Object.keys(DRAW).forEach(function(k){var on=mode==="draw:"+k,b=el("button","btn small"+(on?" on":""),"+ "+esc(DRAW[k].label));b.onclick=function(){if(on)endDraw(true);else startDraw(k);};db.appendChild(b);});
  $("drawTip").textContent=mode&&mode.indexOf("draw:")===0?DRAW[mode.slice(5)].hint+".":"Pick one, then tap it out on the map.";
@@ -1326,7 +1362,7 @@ function layout(sh,M,orn,magnet,keep){
  if(orn){var lr=clamp(0.07*M,5,8);res.loop={x:(res.bb[0]+res.bb[2])/2,y:res.bb[3]+lr*0.55,r:lr};res.bb=[res.bb[0],res.bb[1],res.bb[2],res.bb[3]+lr*1.6];}
  res.tile=tile;res.base=base;res.w=w;res.pd=pd;res.wl=wl;return res;
 }
-function curLayout(k){var c=S.c,key=k||c.size;return layout(c.shape,SIZES[key].mm,key==="orn",c.magnet,c.keep);}
+function curLayout(k){var c=S.c,key=k||c.size;return layout(c.shape,SIZES[key].mm,isLoop(),c.magnet,c.keep);}
 function pathOutline(ctx,o,P,grow){
  grow=grow||0;ctx.beginPath();
  if(o.k==="circle"){var q=P(o.cx,o.cy);ctx.arc(q[0],q[1],(o.r+grow)*P.s,0,Math.PI*2);}
@@ -1364,10 +1400,16 @@ function fitText(txt,cap,width,short){
 function fitCap(t,cap,width){cap=Math.max(cap,MINCAP);while(cap>MINCAP&&textW(t,cap)>width)cap=Math.max(MINCAP,cap*0.94);return cap;}
 function defaultTitle(){return {buck:"BUCK",doe:"DOE",elk:"BULL ELK",turkey:"GOBBLER",bear:"BEAR",hog:"WILD HOG"}[S.c.animal];}
 function statsBits(){
- var p=S.pts,b=[nameOf(WEAPONS,S.c.weapon).toUpperCase()],met=S.units==="metric";
- if(p.hunter&&p.hit){var m=distM(p.hunter,p.hit);b.push(met?Math.round(m)+" M SHOT":Math.round(m*1.09361)+" YD SHOT");}
- if(p.hit&&p.recovery){var m2=trailM();b.push(met?Math.round(m2)+" M TRAIL":Math.round(m2*1.09361)+" YD TRAIL");}
+ var p=S.pts,b=[nameOf(WEAPONS,S.c.weapon).toUpperCase()],met=S.units==="metric",un=met?" M":" YD",kf=met?1:1.09361;
+ if(p.hunter&&p.hit)b.push((typedDist("shotTyped")||Math.round(distM(p.hunter,p.hit)*kf))+un+" SHOT");
+ if(p.hit&&p.recovery)b.push((typedDist("trailTyped")||Math.round(trailM()*kf))+un+" TRAIL");
  return b;
+}
+function iconW(key,color,hpx,maxw){var o=tinted(key,color),w=(o&&o.ready)?hpx*o.cv.width/o.cv.height:hpx;return maxw&&w>maxw?maxw:w;}
+function reliefMM(){ // how tall the land prints once the hills are sized to the piece (TrophyTerrain's auto height)
+ var fr=frame();if(!fr||demCache.rel==null||!demCache.img)return null;
+ var M=modelMM(),t=demCache.rel*M/fr.area,lo=0.09*M,hi=0.20*M;if(t<=0)return 0;
+ return t<lo?Math.min(5*t,lo):t>hi?Math.max(0.3*t,hi):t;
 }
 // everything that goes on the base, already cut to what prints: list of {t, cap, at...}
 function wordsPlan(Lo){
@@ -1485,7 +1527,7 @@ var pvT=null,lastPlan=null,demCache={key:"",img:null,segs:null};
 function schedulePreview(){clearTimeout(pvT);pvT=setTimeout(renderPreview,60);}
 function renderPreview(){
  var cv=$("pv"),ctx=cv.getContext("2d"),W=cv.width,c=S.c;
- var fr=frameCache(),orn=c.size==="orn",M=modelMM(),Lo=curLayout();
+ var fr=frameCache(),orn=isLoop(),M=modelMM(),Lo=curLayout();
  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,W);
  var bb=Lo.bb,bw=bb[2]-bb[0],bh=bb[3]-bb[1],s=(W*0.93)/Math.max(bw,bh+(orn?bw*0.12:0));
  var ox=W/2-(bb[0]+bw/2)*s,oy=W/2+(bb[1]+bh/2)*s+(orn?bw*0.05*s:0);
@@ -1523,10 +1565,10 @@ function renderPreview(){
      var dx=(zr-zl)/(2*cell)*2.2,dy=(zd-zu)/(2*cell)*2.2,nz=1/Math.sqrt(dx*dx+dy*dy+1),sh=(dx*0.5-dy*0.5+0.7)*nz,a=0.62-sh,q=(j*N+i)*4;
      if(a>0){id.data[q]=0;id.data[q+1]=0;id.data[q+2]=0;id.data[q+3]=Math.min(150,a*330);}else{id.data[q]=255;id.data[q+1]=245;id.data[q+2]=220;id.data[q+3]=Math.min(80,-a*260);}}
     ix.putImageData(id,0,0);var steps=[1,2,3,5,10,20,25,50,100],st=steps[steps.length-1];for(var si=0;si<steps.length;si++)if((mx-mn)/steps[si]<=14){st=steps[si];break;}
-    demCache.img=img;demCache.segs=(mx-mn)>=3?contours(g,N,st):[];demCache.n=N;}}
+    demCache.img=img;demCache.segs=(mx-mn)>=3?contours(g,N,st):[];demCache.n=N;demCache.rel=mx-mn;}}
   if(demCache.img){ctx.imageSmoothingEnabled=true;ctx.drawImage(demCache.img,tb[0][0],tb[0][1],TW,TW);
    var pxc=TW/demCache.n;ctx.strokeStyle="rgba(226,212,176,.7)";
-   demCache.segs.forEach(function(sg){ctx.lineWidth=(sg[2]?0.5:0.3)*s;ctx.beginPath();ctx.moveTo(tb[0][0]+(sg[0][0]+0.5)*pxc,tb[0][1]+(sg[0][1]+0.5)*pxc);ctx.lineTo(tb[0][0]+(sg[1][0]+0.5)*pxc,tb[0][1]+(sg[1][1]+0.5)*pxc);ctx.stroke();});}
+   (topoOn()?demCache.segs:[]).forEach(function(sg){ctx.lineWidth=(sg[2]?0.5:0.3)*s;ctx.beginPath();ctx.moveTo(tb[0][0]+(sg[0][0]+0.5)*pxc,tb[0][1]+(sg[0][1]+0.5)*pxc);ctx.lineTo(tb[0][0]+(sg[1][0]+0.5)*pxc,tb[0][1]+(sg[1][1]+0.5)*pxc);ctx.stroke();});}
   ctx.lineCap="round";ctx.lineJoin="round";
   ctx.strokeStyle="rgba(0,0,0,.28)";ctx.lineWidth=(Math.max(1.0,0.012*M)+0.5)*s;roads.forEach(line);
   ctx.strokeStyle=COL.road;ctx.lineWidth=Math.max(1.0,0.012*M)*s;roads.forEach(line);
@@ -1543,15 +1585,18 @@ function renderPreview(){
   var small=M<130,ka=small?1.5:1.2,kw=small?1.55:1.2,kr=small?0.68:0.6;            // 3 and 4 inch maps get bolder symbols, like the print
   if(p.hit&&p.recovery){ctx.fillStyle=col;dropsAlong(ctx,smoothPts(seqPath("trail").map(G)),Math.max(0.55*s,0.085*u),0.56*u,0.75*ka*u,(kr+0.15)*u);}
   if(p.hunter&&p.hit){
-   var A=G(p.hunter),B=G(p.hit),ang=Math.atan2(B[1]-A[1],B[0]-A[0]),dd=Math.hypot(B[0]-A[0],B[1]-A[1])||1,e=[(B[0]-A[0])/dd,(B[1]-A[1])/dd];
-   var a0=[A[0]+e[0]*0.62*kw*u,A[1]+e[1]*0.62*kw*u],b0=[B[0]-e[0]*0.2*u,B[1]-e[1]*0.2*u];
-   if(dd>(0.62*kw+0.75)*u){ctx.strokeStyle=col;ctx.lineWidth=0.09*u;ctx.setLineDash([0.28*u,0.2*u]);ctx.beginPath();ctx.moveTo(a0[0],a0[1]);ctx.lineTo(b0[0],b0[1]);ctx.stroke();ctx.setLineDash([]);
+   var A=G(p.hunter),B=G(p.hit),dd=Math.hypot(B[0]-A[0],B[1]-A[1])||1,e=[(B[0]-A[0])/dd,(B[1]-A[1])/dd],ang=Math.atan2(e[1],e[0]);
+   // like the print: the tip of the weapon sits on your spot and the animal starts at the hit. A very short shot is
+   // spread a little (half each way) so a bit of shot line always shows
+   var need=0.62*u+1.1*s;if(dd<need){var sp=(need-dd)/2;A=[A[0]-e[0]*sp,A[1]-e[1]*sp];B=[B[0]+e[0]*sp,B[1]+e[1]*sp];dd=need;}
+   var a0=[A[0]+e[0]*0.1*u,A[1]+e[1]*0.1*u],b0=[B[0]-e[0]*0.06*u,B[1]-e[1]*0.06*u];
+   if(dd>0.5*u){ctx.strokeStyle=col;ctx.lineWidth=0.09*u;ctx.setLineDash([0.28*u,0.2*u]);ctx.beginPath();ctx.moveTo(a0[0],a0[1]);ctx.lineTo(b0[0]-e[0]*0.25*u,b0[1]-e[1]*0.25*u);ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(b0[0],b0[1]);ctx.lineTo(b0[0]-e[0]*0.3*u-e[1]*0.16*u,b0[1]-e[1]*0.3*u+e[0]*0.16*u);ctx.lineTo(b0[0]-e[0]*0.3*u+e[1]*0.16*u,b0[1]-e[1]*0.3*u-e[0]*0.16*u);ctx.closePath();ctx.fill();}
    var left=e[0]<0;
-   if(c.setup==="weapon")drawIcon(ctx,"weapon_"+c.weapon,col,A[0],A[1],u*kw,left?ang+Math.PI:ang,left,u*kw*1.25);
-   else drawIcon(ctx,"setup_"+c.setup,col,A[0],A[1],u*1.4,0,left);
-   var hk="animal_"+c.animal;
-   drawIcon(ctx,hk,col,B[0]+e[0]*0.5*u,B[1]+e[1]*0.5*u,u*ka,0,left);
+   if(c.setup==="weapon"){var wl=iconW("weapon_"+c.weapon,col,u*kw,u*kw*1.25);drawIcon(ctx,"weapon_"+c.weapon,col,A[0]-e[0]*wl/2,A[1]-e[1]*wl/2,u*kw,left?ang+Math.PI:ang,left,u*kw*1.25);}
+   else{var sw2=iconW("setup_"+c.setup,col,u*1.4),so=(sw2*Math.abs(e[0])+u*1.4*Math.abs(e[1]))/2*0.9;drawIcon(ctx,"setup_"+c.setup,col,A[0]-e[0]*so,A[1]-e[1]*so,u*1.4,0,left);}
+   var hk="animal_"+c.animal,aw=iconW(hk,col,u*ka),ao=(aw*Math.abs(e[0])+u*ka*Math.abs(e[1]))/2*0.9+0.1*u;
+   drawIcon(ctx,hk,col,B[0]+e[0]*ao,B[1]+e[1]*ao,u*ka,0,left);
    var off=[[-0.9,0.7],[-0.9,-0.7],[-1.7,0],[-1.7,1.2]];
    for(var hh=1;hh<c.herd;hh++){var o2=off[hh-1];drawIcon(ctx,hk,col,B[0]+(left?-1:1)*o2[0]*u,B[1]+o2[1]*u,u*0.95,0,left);}
   }else if(p.hunter){var A1=G(p.hunter);drawIcon(ctx,c.setup==="weapon"?"weapon_"+c.weapon:"setup_"+c.setup,col,A1[0],A1[1],u*1.3,0,false,u*1.6);}
@@ -1590,7 +1635,7 @@ function tile(o){
 }
 function pick(key,val,extra){return function(){S.c[key]=val;if(extra)extra();refresh();save();};}
 function renderHunt(){
- var c=S.c,box=$("tAnimal");box.innerHTML="";
+ var c=S.c,box=$("tAnimal");box.innerHTML="";sizeTiles($("tSize1"),false);
  ANIMALS.forEach(function(a){box.appendChild(tile({icon:"animal_"+a[0],label:a[1],on:c.animal===a[0],click:pick("animal",a[0])}));});
  box=$("tWeapon");box.innerHTML="";
  WEAPONS.forEach(function(a){box.appendChild(tile({icon:"weapon_"+a[0],label:a[1],on:c.weapon===a[0],click:pick("weapon",a[0])}));});
@@ -1614,15 +1659,25 @@ var KEEP_SVG={
  shotgun:'<svg viewBox="0 0 60 60"><rect x="16" y="20" width="34" height="20" rx="3" fill="#8f1f22"/><rect x="8" y="18" width="10" height="24" rx="2" fill="#5c1416"/><rect x="5" y="16" width="4" height="28" rx="1" fill="#5c1416"/></svg>',
  broadhead:'<svg viewBox="0 0 60 60"><path d="M54 30 30 18 34 30 30 42z" fill="#8f1f22"/><rect x="8" y="27" width="24" height="6" rx="2" fill="#8f1f22"/></svg>',
  tag:'<svg viewBox="0 0 60 60"><path d="M10 16h30l12 14-12 14H10z" fill="#8f1f22"/><circle cx="40" cy="30" r="4" fill="#CDB98F"/><rect x="15" y="24" width="16" height="3" fill="#CDB98F"/><rect x="15" y="31" width="12" height="3" fill="#CDB98F"/></svg>'};
+var SHELF_SVG='<svg viewBox="0 0 60 60"><rect x="14" y="12" width="32" height="30" rx="4" fill="#8f1f22"/><rect x="6" y="44" width="48" height="5" rx="2" fill="#5c1416"/></svg>';
 var HANG_SVG='<svg viewBox="0 0 60 60"><rect x="12" y="14" width="36" height="32" rx="4" fill="#8f1f22"/><circle cx="30" cy="22" r="4" fill="#CDB98F"/><path d="M30 26v6" stroke="#CDB98F" stroke-width="3"/></svg>';
 function shapeSvg(sh){var o=tileOutline(sh,100).map(function(q){return q[0]+","+(100-q[1]);}).join(" ");
  return '<svg viewBox="-12 -12 124 124"><polygon points="'+o+'" fill="#3F5637" stroke="#CDB98F" stroke-width="7" stroke-linejoin="round"/></svg>';}
 function baseSizeText(k){var b=curLayout(k).bb;return fmtPair(b[2]-b[0],b[3]-b[1])+" with the base";}
-function renderStyle(){
- var c=S.c,orn=c.size==="orn",rect=/^(square|wide|tall)$/.test(c.shape),box=$("tSize");box.innerHTML="";
+function setSize(k){var c=S.c;c.size=k;if(!c.hangSet){c.loop=(k==="orn");if(c.loop){c.magnet=false;c.keep="none";}}refresh();save();}
+function sizeTiles(box,long){
+ var c=S.c;box.innerHTML="";
  ["orn","s4","s6","s8"].forEach(function(k){var z=SIZES[k];
-  box.appendChild(tile({img:k==="orn"?PHOTOS[c.shape==="circle"?"orn_circle":"orn_hex"]:PHOTOS[k],label:sizeLabel(k),price:"$"+z.price+(z.reg>z.price?"<s>$"+z.reg+"</s>":""),note:z.note+". "+baseSizeText(k),on:c.size===k,
-   click:pick("size",k,function(){if(k==="orn"){c.keep="none";c.magnet=false;}})}));});
+  box.appendChild(tile({img:k==="orn"?PHOTOS[c.shape==="circle"?"orn_circle":"orn_hex"]:PHOTOS[k],label:sizeLabel(k),price:"$"+z.price+(z.reg>z.price?"<s>$"+z.reg+"</s>":""),
+   note:long?z.note+". "+baseSizeText(k):z.note,on:c.size===k,click:function(){setSize(k);}}));});
+}
+function sizeModal(){
+ modal('<h2>Pick a size</h2><p class="sub">Shipping included. Change it as often as you like, your hunt stays.</p><div class="tiles big" id="tSizeM"></div><div class="row" style="margin-top:12px"><button class="btn" id="mDone">Done</button></div>');
+ sizeTiles($("tSizeM"),true);$("mDone").onclick=closeModal;
+}
+function renderStyle(){
+ var c=S.c,orn=isLoop(),rect=/^(square|wide|tall)$/.test(c.shape),box=$("tSize");
+ sizeTiles(box,true);
  // does the hunt read at this size
  var tip=$("sizeTip"),fr=frame(),p=S.pts;tip.textContent="";tip.className="tipbox";
  if(fr&&p.hunter&&p.hit){var M=modelMM(),sh=distM(p.hunter,p.hit)*M/fr.area;
@@ -1637,8 +1692,15 @@ function renderStyle(){
   ch.style.background=PRINT[cb[0]];ch.style.color=PRINT[cb[1]];b.appendChild(ch);b.appendChild(el("div","lb",COLOR_NAME[cb[0]]+" base, "+COLOR_NAME[cb[1]].toLowerCase()+" words"));
   b.onclick=function(){c.base=cb[0];c.words=cb[1];refresh();save();};box.appendChild(b);});
  box=$("tMag");box.innerHTML="";
- box.appendChild(tile({svg:HANG_SVG,label:orn?"Ribbon loop":"Wall or shelf",note:orn?"Hangs on the tree":"Hidden hanger on 6 in and up",on:!c.magnet,click:pick("magnet",false)}));
- box.appendChild(tile({img:PHOTOS.magnet_back,label:"Fridge magnet",note:"Free. Magnets in the back",on:c.magnet,dis:orn,click:pick("magnet",true)}));
+ var hang=function(fn){return function(){fn();c.hangSet=true;refresh();save();};};
+ box.appendChild(tile({svg:SHELF_SVG,label:"Shelf or wall",note:"Hidden hanger on 6 in and up",on:!c.magnet&&!orn,click:hang(function(){c.magnet=false;c.loop=false;})}));
+ box.appendChild(tile({svg:HANG_SVG,label:"Ribbon loop",note:"Hangs on a tree or a nail. Any size",on:orn,click:hang(function(){c.loop=true;c.magnet=false;c.keep="none";})}));
+ box.appendChild(tile({img:PHOTOS.magnet_back,label:"Fridge magnet",note:"+$"+MAGNET_PRICE+". Magnets set in the back",on:!!c.magnet,click:hang(function(){c.magnet=true;c.loop=false;})}));
+ var ht=$("hangTip");ht.textContent="";ht.className="tipbox";
+ if(orn){var M2=modelMM(),maxT=Math.max(10,Math.round(0.9*M2)/10),rel=reliefMM(),room=maxT-clamp(0.033*M2,3.5,6.5)-2-1.45;
+  if(rel!=null&&rel>room+0.05)ht.textContent="With a ribbon loop the map is kept under "+fmtLen(maxT)+" thick so it hangs flat. Your hills will print about "+Math.round(100*(1-room/rel))+"% lower. Pick Shelf or wall to keep them full height.";
+  else{ht.className="tipbox ok";ht.textContent="With a ribbon loop the map is kept under "+fmtLen(maxT)+" thick so it hangs flat."+(rel!=null?" Your land fits as it is.":"");}}
+ else if(c.magnet){ht.className="tipbox ok";ht.textContent="Magnets are set into the back for you, +$"+MAGNET_PRICE+".";}
  $("keepBox").style.display=(rect&&!orn)?"":"none";$("keepPrice").textContent=KEEPSAKE_PRICE;
  box=$("tKeep");box.innerHTML="";
  KEEPS.forEach(function(a){box.appendChild(tile({svg:KEEP_SVG[a[0]],label:a[1],note:a[0]==="none"?"":"+$"+KEEPSAKE_PRICE,on:c.keep===a[0],click:pick("keep",a[0])}));});
@@ -1655,7 +1717,8 @@ function wordHints(){
  });
 }
 ["l1","l2"].forEach(function(id){$(id).addEventListener("input",function(){S[id]=this.value;renderPreview();wordHints();save();});});
-function price(){var z=SIZES[S.c.size],keep=curLayout().keep?KEEPSAKE_PRICE:0;return {map:z.price,reg:z.reg,keep:keep,total:z.price+keep};}
+[["dShot","shotTyped"],["dTrail","trailTyped"]].forEach(function(a){$(a[0]).addEventListener("input",function(){this.value=this.value.replace(/[^0-9]/g,"");S.c[a[1]]=this.value;renderPreview();wordHints();distHints();save();});});
+function price(){var z=SIZES[S.c.size],keep=curLayout().keep?KEEPSAKE_PRICE:0,mag=S.c.magnet&&!isLoop()?MAGNET_PRICE:0;return {map:z.price,reg:z.reg,keep:keep,magnet:mag,total:z.price+keep+mag};}
 function comboText(){return COLOR_NAME[S.c.base].toLowerCase()+" base, "+COLOR_NAME[S.c.words].toLowerCase()+" words";}
 function landText(){
  var n={};CATS.forEach(function(c){n[c.id]=catState(c.id).n;});var t=[];
@@ -1668,13 +1731,13 @@ function landText(){
 function renderSend(){
  var c=S.c,p=price(),fr=frame(),pl=lastPlan||{},li=[];
  li.push("<b>"+esc(nameOf(ANIMALS,c.animal))+"</b>"+(c.herd>1?" (group of "+c.herd+")":"")+", "+esc(nameOf(WEAPONS,c.weapon).toLowerCase())+(c.setup!=="weapon"?", "+esc(nameOf(SETUPS,c.setup).toLowerCase()):""));
- li.push("<b>"+esc(sizeLabel(c.size))+" "+esc(nameOf(SHAPES,c.shape).toLowerCase())+"</b>, "+esc(comboText())+(c.magnet?", fridge magnet":"")+(p.keep?", "+esc(nameOf(KEEPS,c.keep).toLowerCase())+" pocket":""));
+ li.push("<b>"+esc(sizeLabel(c.size))+" "+esc(nameOf(SHAPES,c.shape).toLowerCase())+"</b>, "+esc(comboText())+(p.magnet?", fridge magnet":"")+(isLoop()?", ribbon loop":"")+(p.keep?", "+esc(nameOf(KEEPS,c.keep).toLowerCase())+" pocket":""));
  li.push("Words: <b>"+esc((pl.l1&&pl.l1.got)||defaultTitle())+"</b>"+(pl.l2&&pl.l2.got?" / <b>"+esc(pl.l2.got)+"</b>":""));
  if(fr)li.push("Shows "+esc(fmtDist(fr.area))+" across: "+esc(landText()));
  $("review").innerHTML=li.map(function(x){return "<li>"+x+"</li>";}).join("");
  $("tLine1").textContent=sizeLabel(c.size)+" "+nameOf(SHAPES,c.shape).toLowerCase();
  $("tVal1").innerHTML="$"+p.map+(p.reg>p.map?' <s style="opacity:.6">$'+p.reg+"</s>":"");
- $("tKeepLine").style.display=p.keep?"":"none";$("tKeepVal").textContent="$"+p.keep;$("tSum").textContent="$"+p.total;
+ $("tKeepLine").style.display=p.keep?"":"none";$("tKeepVal").textContent="$"+p.keep;$("tMagLine").style.display=p.magnet?"":"none";$("tMagVal").textContent="$"+p.magnet;$("tSum").textContent="$"+p.total;
 }
 var xmas="";
 document.querySelectorAll(".xm").forEach(function(b){b.onclick=function(){xmas=xmas===b.dataset.v?"":b.dataset.v;syncXmas();save();};});
@@ -1723,13 +1786,15 @@ function buildJob(){
  var p=S.pts,miss=[];
  if(!p.hunter)miss.push("where you shot from");if(!p.hit)miss.push("where the animal stood");if(!p.recovery)miss.push("where you found it");
  if(miss.length)return {error:"Go back to Mark it and mark "+miss.join(", ")+"."};
- var fr=frameCache(),c=S.c,orn=c.size==="orn",Lo=curLayout(),plan=wordsPlan(Lo);
+ var fr=frameCache(),c=S.c,orn=isLoop(),Lo=curLayout(),plan=wordsPlan(Lo);
  var job={name:(($("cname").value||"Customer").trim())+" hunt",center:fr.c,area_m:fr.area,model_mm:SIZES[c.size].mm,
   hunter:p.hunter,hit:p.hit,trail:S.seq.trail,recovery:p.recovery,animal:c.animal,herd:c.herd,weapon:c.weapon,
   shot_mark:c.setup==="weapon"?"weapon":"setup",setup:c.setup==="weapon"?"ground":c.setup,weapon_on_base:true,
   shape:c.shape,keepsake:Lo.keep?(c.keep==="tag"?"broadhead":c.keep):"none",magnet:!!c.magnet&&!orn,ornament:orn,units:S.units,
-  plaque_line1:(plan.l1&&plan.l1.got)||defaultTitle(),plaque_line2:(plan.l2&&plan.l2.got)||"",topo_lines:true,base_color:c.base,text_color:c.words,
+  plaque_line1:(plan.l1&&plan.l1.got)||defaultTitle(),plaque_line2:(plan.l2&&plan.l2.got)||"",topo_lines:topoOn(),exaggeration:"auto",base_color:c.base,text_color:c.words,
   woods:[],fields:[],creeks:[],roads:[],props:[]};
+ if(typedDist("shotTyped"))job.shot_dist=typedDist("shotTyped");
+ if(typedDist("trailTyped"))job.trail_dist=typedDist("trailTyped");
  var sc=sceneForJob(fr);
  job.woods=sc.woods;job.fields=sc.fields;job.creeks=sc.creeks;job.roads=sc.roads;
  job.props=sc.houses.map(function(h){return {type:"cabin",at:h};});
@@ -1740,7 +1805,7 @@ function buildJob(){
  // the land is in the order as the customer saw it. TrophyTerrain only looks it up itself when the page never got it
  job.osm={auto:!OSM.bbox,source:"page4"+(OSM.src==="backup"?" backup":""),off:Object.keys(S.off),cats_off:Object.keys(S.catsOff)};
  var pr=price();
- job.customer={name:$("cname").value.trim(),contact:$("csocial").value.trim(),notes:$("notes").value.trim(),keepsake_item:Lo.keep?c.keep:"none",size:c.size,price:pr.total,placed_by:"Hunt Builder 4"};
+ job.customer={name:$("cname").value.trim(),contact:$("csocial").value.trim(),notes:$("notes").value.trim(),keepsake_item:Lo.keep?c.keep:"none",size:c.size,price:pr.total,hang:orn?"loop":(c.magnet?"magnet":"shelf"),base_text:(plan.items||[]).map(function(i){return i.t;}),placed_by:"Hunt Builder 4.1"};
  return {job:job,plan:plan,price:pr};
 }
 function b64url(bytes){var bin="";for(var i=0;i<bytes.length;i+=8192)bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
@@ -1752,7 +1817,7 @@ function encode(job){ // HSM2: deflate packed JSON. HSM1 (plain) where the brows
  }catch(e){return Promise.resolve("HSM1-"+b64url(bytes));}
 }
 function summary(r){
- var c=S.c;return sizeLabel(c.size)+" "+nameOf(SHAPES,c.shape)+" | "+comboText()+" | "+nameOf(ANIMALS,c.animal)+" | "+c.weapon+" | "+(c.setup==="weapon"?"weapon at the shot spot":c.setup)+(r.price.keep?" | pocket: "+c.keep:"")+(c.magnet?" | magnet":"")+" | $"+r.price.total;
+ var c=S.c;return sizeLabel(c.size)+" "+nameOf(SHAPES,c.shape)+" | "+comboText()+" | "+nameOf(ANIMALS,c.animal)+" | "+c.weapon+" | "+(c.setup==="weapon"?"weapon at the shot spot":c.setup)+(r.price.keep?" | pocket: "+c.keep:"")+(r.price.magnet?" | magnet +$"+r.price.magnet:"")+(isLoop()?" | ribbon loop":"")+(topoOn()?"":" | no topo lines")+(typedDist("shotTyped")||typedDist("trailTyped")?" | typed: "+statsBits().slice(1).join(", "):"")+" | $"+r.price.total;
 }
 function validate(){
  var bad=[],need=[["cname","your name"],["cemail","your email"],["astreet","your street address"],["acity","your city"],["astate","your state"],["azip","your ZIP"]];
@@ -1824,7 +1889,8 @@ function buildSteps(){
  var bar=$("steps");bar.innerHTML="";
  for(var i=1;i<=7;i++)(function(i){var b=el("button",(i===S.step?"on":i<S.step?"done":""),"<span>"+i+" "+esc(STEPS[i].name)+"</span>");
   b.disabled=i>S.step&&!reach(i);b.setAttribute("aria-label","Step "+i+": "+STEPS[i].name);b.onclick=function(){if(i!==S.step)go(i);};bar.appendChild(b);})(i);
- $("stitle").innerHTML="<b>Step "+S.step+" of 7</b> &nbsp; "+esc(STEPS[S.step].name)+'<span class="sp"></span><a id="help2">Help</a>';
+ $("stitle").innerHTML="<b>Step "+S.step+" of 7</b> &nbsp; "+esc(STEPS[S.step].name)+'<span class="sp"></span><a id="sizeBtn"></a> &nbsp; <a id="help2">Help</a>';
+ $("sizeBtn").onclick=sizeModal;sizeBtnText();
  $("help2").onclick=$("helpBtn").onclick;
 }
 function navState(){
@@ -1857,6 +1923,17 @@ function setHint(){
  $("drawUndo").textContent=sel?"Delete it":(drawing&&DRAW[mode.slice(5)].kind==="pt"?"Stop":"Undo point");
  $("drawDone").textContent=sel?"Done":(drawing&&DRAW[mode.slice(5)].kind==="pt"?"Done":"Done drawing");
 }
+function sizeBtnText(){var t="Size: "+esc(sizeLabel(S.c.size))+" &#9662;",b=$("sizeBtn"),b2=$("sizeBtnTop");if(b)b.innerHTML=t;if(b2){b2.innerHTML=t;b2.style.display=S.step>=1?"":"none";b2.onclick=sizeModal;}var tm=$("tSizeM");if(tm)sizeTiles(tm,true);}
+function distHints(){
+ var p=S.pts,met=S.units==="metric",un=met?"m":"yd",kf=met?1:1.09361;
+ var ms=p.hunter&&p.hit?Math.round(distM(p.hunter,p.hit)*kf):"",mt=p.hit&&p.recovery?Math.round(trailM()*kf):"";
+ $("duShot").textContent=un;$("duTrail").textContent=un;$("dShot").placeholder=ms;$("dTrail").placeholder=mt;
+ if(document.activeElement!==$("dShot"))$("dShot").value=S.c.shotTyped||"";
+ if(document.activeElement!==$("dTrail"))$("dTrail").value=S.c.trailTyped||"";
+ var t=typedDist("shotTyped"),t2=typedDist("trailTyped");
+ $("wDist").innerHTML=(t||t2)?"The base will say <b>"+(t||ms)+" "+un+" shot</b> and <b>"+(t2||mt)+" "+un+" trail</b>. Your pins measure "+ms+" and "+mt+". Empty a box to go back to the measured number."
+  :"Measured from your pins: <b>"+ms+" "+un+" shot</b>, <b>"+mt+" "+un+" trail</b>. Leave the boxes empty to use these.";
+}
 function refresh(){
  var n=S.step;
  if(map&&n>=2&&n<=5){drawLines();drawHandles();drawFrame();drawFeats();drawDraft();}
@@ -1868,14 +1945,15 @@ function refresh(){
  setHint();
  var f=frame();if(f&&n>=3){maybeFetchOSM();demFor(f);}
  renderPreview();
- if(n===6)wordHints();
+ if(n===6){wordHints();distHints();}
+ sizeBtnText();
  if(n===7)renderSend();
  if(n>=1){buildSteps();navState();}
 }
 function go(n){
  if(sent)return;
  var app=$("app");
- if(n<1){S.step=0;$("landing").style.display="";$("work").style.display="none";$("steps").style.display="none";$("stitle").style.display="none";app.className="app nostage";save();return;}
+ if(n<1){S.step=0;if($("sizeBtnTop"))$("sizeBtnTop").style.display="none";$("landing").style.display="";$("work").style.display="none";$("steps").style.display="none";$("stitle").style.display="none";app.className="app nostage";save();return;}
  n=Math.min(n,7);while(n>1&&!reach(n))n--;
  S.step=n;$("landing").style.display="none";$("work").style.display="";$("steps").style.display="";$("stitle").style.display="";
  var st=STEPS[n];app.className="app wiz"+(st.stage==="pv"?(st.phone?" pvstage":" nostage pvstage"):"");
