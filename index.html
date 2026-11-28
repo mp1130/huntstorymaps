@@ -1038,9 +1038,9 @@ function zoomInfo(){
   var shot=distM(p.hunter,p.hit)*s,trail=p.recovery?trailM()*s:0;
   if(shot<1.6*u){
    var bigger=["s4","s6","s8"].filter(function(k){return SIZES[k].mm>M;})[0];
-   t="Your shot is only "+fmtLen(shot)+" long on this map, so the shot line will be hard to see. ";
-   if(f.area>f.min*1.03)t+="Slide toward Closer.";
-   else t+=bigger?"This is as close as it goes. A bigger size on the next step shows it better.":"This is as close as it goes.";
+   t="Your shot is "+fmtLen(shot)+" long on this map. "+(shot<0.62*u+1.1?"The weapon and the animal are set a little apart so the shot line still shows. The yards on the base stay the same. ":"The shot line is short, but it shows. ");
+   if(f.area>f.min*1.2)t+="Slide toward Closer to make it longer.";
+   else t+=bigger?"This is about as close as it goes with your whole hunt on the map. A bigger size shows it longer (Size button at the top).":"This is about as close as it goes with your whole hunt on the map.";
   }else{tip.className="tipbox ok";t="Looks good. On your map the shot is "+fmtLen(shot)+" long"+(trail?" and the blood trail is "+fmtLen(trail)+" long":"")+".";}
  }
  tip.textContent=t;
@@ -1408,7 +1408,7 @@ function statsBits(){
 function iconW(key,color,hpx,maxw){var o=tinted(key,color),w=(o&&o.ready)?hpx*o.cv.width/o.cv.height:hpx;return maxw&&w>maxw?maxw:w;}
 function reliefMM(){ // how tall the land prints once the hills are sized to the piece (TrophyTerrain's auto height)
  var fr=frame();if(!fr||demCache.rel==null||!demCache.img)return null;
- var M=modelMM(),t=demCache.rel*M/fr.area,lo=0.09*M,hi=0.20*M;if(t<=0)return 0;
+ var M=modelMM(),t=demCache.rel*M/fr.area,lo=0.06*M,hi=0.20*M;if(t<=0)return 0;
  return t<lo?Math.min(5*t,lo):t>hi?Math.max(0.3*t,hi):t;
 }
 // everything that goes on the base, already cut to what prints: list of {t, cap, at...}
@@ -1570,10 +1570,10 @@ function renderPreview(){
    var pxc=TW/demCache.n;ctx.strokeStyle="rgba(226,212,176,.7)";
    (topoOn()?demCache.segs:[]).forEach(function(sg){ctx.lineWidth=(sg[2]?0.5:0.3)*s;ctx.beginPath();ctx.moveTo(tb[0][0]+(sg[0][0]+0.5)*pxc,tb[0][1]+(sg[0][1]+0.5)*pxc);ctx.lineTo(tb[0][0]+(sg[1][0]+0.5)*pxc,tb[0][1]+(sg[1][1]+0.5)*pxc);ctx.stroke();});}
   ctx.lineCap="round";ctx.lineJoin="round";
-  ctx.strokeStyle="rgba(0,0,0,.28)";ctx.lineWidth=(Math.max(1.0,0.012*M)+0.5)*s;roads.forEach(line);
-  ctx.strokeStyle=COL.road;ctx.lineWidth=Math.max(1.0,0.012*M)*s;roads.forEach(line);
-  ctx.setLineDash([2.2*s,1.6*s]);ctx.lineWidth=Math.max(0.8,0.008*M)*s;trails.forEach(line);ctx.setLineDash([]);
-  ctx.strokeStyle=COL.water;ctx.lineWidth=Math.max(1.0,0.010*M)*s;creeks.forEach(line);
+  var kmm=M/fr.area,roadW=Math.max(4*kmm,0.6),creekW=Math.max(3*kmm,0.6);   // mm on the print, same rule as TrophyTerrain
+  ctx.strokeStyle="rgba(0,0,0,.28)";ctx.lineWidth=(roadW+0.5)*s;roads.forEach(line);trails.forEach(line);
+  ctx.strokeStyle=COL.road;ctx.lineWidth=roadW*s;roads.forEach(line);trails.forEach(line);
+  ctx.strokeStyle=COL.water;ctx.lineWidth=creekW*s;creeks.forEach(line);
   // the story
   var u=symUnit(M)*s,p=S.pts,col=COL.story;
   houses.forEach(function(h){if(!inTile(fr,h))return;var q=G(h);drawIcon(ctx,"house",col,q[0],q[1],u*0.75,0,false);});
@@ -1682,8 +1682,8 @@ function renderStyle(){
  var tip=$("sizeTip"),fr=frame(),p=S.pts;tip.textContent="";tip.className="tipbox";
  if(fr&&p.hunter&&p.hit){var M=modelMM(),sh=distM(p.hunter,p.hit)*M/fr.area;
   if(sh<1.6*symUnit(M)){var up=["s4","s6","s8"].filter(function(k){return SIZES[k].mm>M;});
-   tip.textContent="On the "+sizeLabel(c.size)+" your "+fmtDist(distM(p.hunter,p.hit))+" shot is only "+fmtLen(sh)+" long, so the symbols sit close together. "+
-    (fr.area>fr.min*1.03?"Go back to Zoom and slide toward Closer"+(up.length?", or pick a bigger size.":"."):(up.length?"The "+sizeLabel(up[up.length>1?1:0])+" shows the shot and the trail much better.":""));}
+   tip.textContent="On the "+sizeLabel(c.size)+" your shot is "+fmtLen(sh)+" long on the map"+(sh<0.62*symUnit(M)+1.1?", so the weapon and the animal are set a little apart to show the shot line. ":", so the shot line is short. ")+
+    (fr.area>fr.min*1.2?"For a longer line go back to Zoom and slide toward Closer"+(up.length?", or pick a bigger size.":"."):(up.length?"The "+sizeLabel(up[up.length>1?1:0])+" shows the shot and the trail much better.":""));}
   else{tip.className="tipbox ok";tip.textContent="Good size for this hunt: the shot is "+fmtLen(sh)+" long on the map.";}}
  box=$("tShape");box.innerHTML="";
  SHAPES.forEach(function(a){box.appendChild(tile({img:PHOTOS[a[0]],svg:PHOTOS[a[0]]?null:shapeSvg(a[0]),label:a[1],on:c.shape===a[0],click:pick("shape",a[0],function(){if(!/^(square|wide|tall)$/.test(a[0]))c.keep="none";})}));});
@@ -1697,7 +1697,7 @@ function renderStyle(){
  box.appendChild(tile({svg:HANG_SVG,label:"Ribbon loop",note:"Hangs on a tree or a nail. Any size",on:orn,click:hang(function(){c.loop=true;c.magnet=false;c.keep="none";})}));
  box.appendChild(tile({img:PHOTOS.magnet_back,label:"Fridge magnet",note:"+$"+MAGNET_PRICE+". Magnets set in the back",on:!!c.magnet,click:hang(function(){c.magnet=true;c.loop=false;})}));
  var ht=$("hangTip");ht.textContent="";ht.className="tipbox";
- if(orn){var M2=modelMM(),maxT=Math.max(10,Math.round(0.9*M2)/10),rel=reliefMM(),room=maxT-clamp(0.033*M2,3.5,6.5)-2-1.45;
+ if(orn){var M2=modelMM(),maxT=Math.max(10,Math.round(0.9*M2)/10),rel=reliefMM(),room=maxT-clamp(0.033*M2,3.5,6.5)-2-(0.55+0.9*clamp(symUnit(M2)/8.5,1,1.3));
   if(rel!=null&&rel>room+0.05)ht.textContent="With a ribbon loop the map is kept under "+fmtLen(maxT)+" thick so it hangs flat. Your hills will print about "+Math.round(100*(1-room/rel))+"% lower. Pick Shelf or wall to keep them full height.";
   else{ht.className="tipbox ok";ht.textContent="With a ribbon loop the map is kept under "+fmtLen(maxT)+" thick so it hangs flat."+(rel!=null?" Your land fits as it is.":"");}}
  else if(c.magnet){ht.className="tipbox ok";ht.textContent="Magnets are set into the back for you, +$"+MAGNET_PRICE+".";}
